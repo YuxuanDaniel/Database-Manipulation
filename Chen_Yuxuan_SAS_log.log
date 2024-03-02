@@ -1,0 +1,188 @@
+NOTE: Copyright (c) 2016 by SAS Institute Inc., Cary, NC, USA.
+NOTE: SAS (r) Proprietary Software 9.4 (TS1M7)
+      Licensed to HUAZHONG UNIVERSITY OF SCIENCE & TECHNOLOGY, Site 70296224.
+NOTE: This session is executing on the X64_10HOME  platform.
+
+
+
+NOTE: Analytical products:
+
+      SAS/STAT 15.2
+      SAS/ETS 15.2
+      SAS/OR 15.2
+      SAS/IML 15.2
+      SAS/QC 15.2
+
+NOTE: Additional host information:
+
+ X64_10HOME WIN 10.0.22621  Workstation
+
+NOTE: SAS initialization used:
+      real time           0.84 seconds
+      cpu time            0.10 seconds
+
+1    /* Fall 2023 STSCI 5060 Final Project  */
+2    /* Student Name: Yuxuan Chen */
+3    /* NewID: yc2763             */
+4
+5    title '******** Step 4 ********';
+6    libname Final 'C:\Users\22815\Desktop\5060_FP';
+NOTE: Libref FINAL was successfully assigned as follows:
+      Engine:        V9
+      Physical Name: C:\Users\22815\Desktop\5060_FP
+7    /* Connect oracle database user we created earlier by creating a oracle libref myoracle*/
+8    libname myoracle oracle user = 'Chen_Yuxuan_STSCI5060FP' password = XXXXXX;
+
+NOTE: Libref MYORACLE was successfully assigned as follows:
+      Engine:        ORACLE
+      Physical Name:
+9    /* Create an oracle database table school_finance_2010_t*/
+10   proc sql;
+11      drop table myoracle.School_Finance_2010_t;
+NOTE: Table MYORACLE.SCHOOL_FINANCE_2010_T has been dropped.
+12      create table myoracle.School_Finance_2010_t as
+13      select * from Final.School_Finance_2010;
+NOTE: SAS variable labels, formats, and lengths are not written to DBMS tables.
+NOTE: Table MYORACLE.SCHOOL_FINANCE_2010_T created, with 14633 rows and 139 columns.
+
+14   quit;
+NOTE: PROCEDURE SQL used (Total process time):
+      real time           0.44 seconds
+      cpu time            0.00 seconds
+
+
+15
+16   title '******** Step 12 ********';
+17   libname myoracle clear;
+NOTE: Libref MYORACLE has been deassigned.
+18   libname myoracle oracle user = 'Chen_Yuxuan_STSCI5060FP' password = XXXXXX;
+
+NOTE: Libref MYORACLE was successfully assigned as follows:
+      Engine:        ORACLE
+      Physical Name:
+19   /* Use merge to combine data from three views*/
+20   data mfslr_t;
+21   merge myoracle.mlf_v myoracle.msr_v myoracle.mlr_v;
+22   run;
+
+NOTE: There were 51 observations read from the data set MYORACLE.MLF_V.
+NOTE: There were 51 observations read from the data set MYORACLE.MSR_V.
+NOTE: There were 51 observations read from the data set MYORACLE.MLR_V.
+NOTE: The data set WORK.MFSLR_T has 51 observations and 4 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.02 seconds
+      cpu time            0.00 seconds
+
+
+23   /* Create mfslr_t table in oracle use combined_views we created earlier*/
+24   proc sql;
+25   drop table myoracle.mfslr_t;
+WARNING: File MYORACLE.MFSLR_T.DATA does not exist.
+WARNING: Table MYORACLE.MFSLR_T has not been dropped.
+26   create table myoracle.mfslr_t
+27   as select *
+28   from
+29   mfslr_t
+30   order by stcode;
+NOTE: SAS variable labels, formats, and lengths are not written to DBMS tables.
+NOTE: Table MYORACLE.MFSLR_T created, with 51 rows and 4 columns.
+
+31
+32   title '******** Step 20 ********';
+33   libname SASUER 'C:\Users\22815\Desktop\5060_FP';
+NOTE: Libref SASUER refers to the same physical library as FINAL.
+NOTE: Libref SASUER was successfully assigned as follows:
+      Engine:        V9
+      Physical Name: C:\Users\22815\Desktop\5060_FP
+34   /* Create a dataset Total_Rev by querying the Total_Rev_v in Oracle*/
+NOTE: PROCEDURE SQL used (Total process time):
+      real time           0.06 seconds
+      cpu time            0.00 seconds
+
+
+35   proc sql;
+36   create table sasuser.Total_Rev
+37   as select * from myoracle.Total_Rev_v;
+NOTE: Table SASUSER.TOTAL_REV created, with 14633 rows and 5 columns.
+
+38   quit;
+NOTE: PROCEDURE SQL used (Total process time):
+      real time           0.02 seconds
+      cpu time            0.00 seconds
+
+
+39
+40   title '******** Step 21 ********';
+41   /* Correlation analysis*/
+42   proc corr data= sasuser.Total_Rev
+43   plots(maxpoints=NONE)= matrix(histogram);
+44   var tfedrev tstrev tlocrev;
+45   run;
+
+NOTE: Writing HTML Body file: sashtml.htm
+NOTE: PROCEDURE CORR used (Total process time):
+      real time           1.08 seconds
+      cpu time            0.07 seconds
+
+
+46
+47   title '******** Step 22 ********';
+48   /* Regression analysis*/
+49   proc reg data= sasuser.Total_Rev;
+50   model tfedrev = tstrev tlocrev;
+51   run;
+
+WARNING: Most ODS graphics with more than 5000 points have been suppressed. Use the PLOTS(MAXPOINTS= ) option in the PROC REG
+         statement to change or override the cutoff.
+NOTE: Heat maps are displayed instead of scatter plots when residual plots or fit plots are produced.
+52
+53   title '******** Step 23 ********';
+54   /* Correlation analysis by using data from the Total_Rev_v in Oracle*/
+
+NOTE: PROCEDURE REG used (Total process time):
+      real time           0.36 seconds
+      cpu time            0.03 seconds
+
+
+55   proc corr data= myoracle.Total_Rev_v
+56   plots(maxpoints=NONE)= matrix(histogram);
+57   var tfedrev tstrev tlocrev;
+58   run;
+
+NOTE: PROCEDURE CORR used (Total process time):
+      real time           0.38 seconds
+      cpu time            0.01 seconds
+
+
+59
+60   /* Regression analysis by using data from the Total_Rev_v in Oracle*/
+61   proc reg data= myoracle.Total_Rev_v;
+62   model tfedrev = tstrev tlocrev;
+63   run;
+
+WARNING: Most ODS graphics with more than 5000 points have been suppressed. Use the PLOTS(MAXPOINTS= ) option in the PROC REG
+         statement to change or override the cutoff.
+NOTE: Heat maps are displayed instead of scatter plots when residual plots or fit plots are produced.
+64
+65   title '******** Step 24 ********';
+66   /*Create School_Finance_2015_t table*/
+
+NOTE: PROCEDURE REG used (Total process time):
+      real time           0.35 seconds
+      cpu time            0.04 seconds
+
+
+67   proc sql;
+68   drop table myoracle.School_Finance_2015_t;
+NOTE: Table MYORACLE.SCHOOL_FINANCE_2015_T has been dropped.
+69   create table myoracle.School_Finance_2015_t
+70   as select * from Final.School_Finance_2015;
+NOTE: SAS variable labels, formats, and lengths are not written to DBMS tables.
+NOTE: Table MYORACLE.SCHOOL_FINANCE_2015_T created, with 14376 rows and 138 columns.
+
+71   quit;
+NOTE: PROCEDURE SQL used (Total process time):
+      real time           0.34 seconds
+      cpu time            0.00 seconds
+
+
